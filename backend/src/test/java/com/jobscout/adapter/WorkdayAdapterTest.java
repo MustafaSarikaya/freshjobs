@@ -33,11 +33,6 @@ class WorkdayAdapterTest {
         adapter = new WorkdayAdapter(listBuilder.build(), detailBuilder.build());
     }
 
-    /**
-     * Workday only reports the real {@code total} on the first page; later
-     * pages come back with {@code total: 0}. Treating that 0 as authoritative
-     * stopped every Workday source at 40 listings.
-     */
     @Test
     void paginatesPastSecondPageWhenLaterPagesReportZeroTotal() {
         expectPage(0, 45, 0, 20);
@@ -50,7 +45,6 @@ class WorkdayAdapterTest {
         listServer.verify();
     }
 
-    /** Workday job URLs must include the site segment or they 404. */
     @Test
     void jobUrlIncludesSiteSegment() {
         expectPage(0, 1, 0, 1);

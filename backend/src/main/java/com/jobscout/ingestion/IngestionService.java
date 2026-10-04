@@ -55,8 +55,6 @@ public class IngestionService {
         this.adapters = adapters;
         this.normalizer = normalizer;
         // Per-source transaction so one bad source doesn't roll back the others.
-        // Explicit template rather than @Transactional: ingestAll calls into
-        // this same bean, which would bypass Spring's proxy.
         this.perSourceTx = new TransactionTemplate(txManager);
         this.perSourceTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -99,10 +97,6 @@ public class IngestionService {
         return result;
     }
 
-    /**
-     * Fetch outside any transaction (some boards take a minute), then persist
-     * in a fresh transaction. Counts are only reported if the commit succeeds.
-     */
     IngestionResult processSource(Source source) {
         Adapter adapter = adapters.get(source.getPlatform());
         List<FetchedListing> fetched = adapter.fetchListings(source.getBoardId());

@@ -1,7 +1,3 @@
--- Atlassian (the only Lever source) moved off Lever in V3, leaving the Lever
--- adapter with nothing to ingest. Seed companies with live Lever boards,
--- plus Wealthsimple (moved from Lever to Ashby) and Canadian and US scale-ups.
-
 INSERT INTO core_source (name, platform, board_id, is_active)
 VALUES
     ('Fullscript', 'lever', 'fullscript', true),

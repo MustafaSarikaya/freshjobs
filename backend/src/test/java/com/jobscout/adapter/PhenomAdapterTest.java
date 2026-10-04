@@ -12,12 +12,6 @@ import org.springframework.web.client.RestClient;
 
 class PhenomAdapterTest {
 
-    /**
-     * Phenom's {@code multi_location_array} entries are objects
-     * ({@code {latlong, location}}), not strings. Stringifying them produced
-     * unparseable "{latlong=..., location=...}" values, so RBC/BMO/OMERS
-     * listings ended up with no locations.
-     */
     @Test
     void readsLocationNamesFromMultiLocationArrayObjects() {
         RestClient.Builder builder = RestClient.builder();

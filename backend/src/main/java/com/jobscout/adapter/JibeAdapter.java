@@ -32,7 +32,6 @@ class JibeAdapter implements Adapter {
         String host = normalizeHost(boardId);
         List<FetchedListing> out = new ArrayList<>();
         int offset = 0;
-        // Jibe ignores from/size; it pages with a 1-based page and limit.
         int page = 1;
 
         while (true) {

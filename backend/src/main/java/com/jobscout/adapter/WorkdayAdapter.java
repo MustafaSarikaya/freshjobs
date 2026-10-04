@@ -55,8 +55,6 @@ class WorkdayAdapter implements Adapter {
         List<String> pendingPath = new ArrayList<>();
 
         String jobUrlBase = host + "/" + site;
-        // Workday reports the real total only on the first page; later pages
-        // return total=0, so remember the first non-zero value.
         long knownTotal = -1;
         int offset = 0;
         while (true) {

@@ -16,11 +16,6 @@ import org.springframework.web.client.RestClient;
 
 class JibeAdapterTest {
 
-    /**
-     * Jibe's /api/jobs ignores {@code from}/{@code size} and pages with a
-     * 1-based {@code page} plus {@code limit}. Paging by {@code from} fetched
-     * AON's first page over and over, leaving only 10 distinct listings.
-     */
     @Test
     void pagesWithPageAndLimitParameters() {
         RestClient.Builder builder = RestClient.builder();

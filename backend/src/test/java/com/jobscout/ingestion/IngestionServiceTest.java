@@ -35,13 +35,6 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
-/**
- * {@code ingestAll} used to call a {@code @Transactional} method on
- * {@code this}, which bypasses Spring's proxy. With no session open, location
- * tags were never flushed and lazy collections threw
- * LazyInitializationException. These tests pin that each source is persisted
- * inside its own REQUIRES_NEW transaction.
- */
 class IngestionServiceTest {
 
     private final SourceRepository sources = mock(SourceRepository.class);
