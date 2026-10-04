@@ -24,8 +24,9 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class IngestionService {
@@ -38,19 +39,26 @@ public class IngestionService {
     private final RunRepository runs;
     private final AdapterRegistry adapters;
     private final LocationNormalizationService normalizer;
+    private final TransactionTemplate perSourceTx;
 
     public IngestionService(SourceRepository sources,
                             JobListingRepository listings,
                             LocationTagRepository locations,
                             RunRepository runs,
                             AdapterRegistry adapters,
-                            LocationNormalizationService normalizer) {
+                            LocationNormalizationService normalizer,
+                            PlatformTransactionManager txManager) {
         this.sources = sources;
         this.listings = listings;
         this.locations = locations;
         this.runs = runs;
         this.adapters = adapters;
         this.normalizer = normalizer;
+        // Per-source transaction so one bad source doesn't roll back the others.
+        // Explicit template rather than @Transactional: ingestAll calls into
+        // this same bean, which would bypass Spring's proxy.
+        this.perSourceTx = new TransactionTemplate(txManager);
+        this.perSourceTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /**
@@ -68,7 +76,10 @@ public class IngestionService {
         IngestionResult result = new IngestionResult();
         for (Source source : sources.findByActiveTrue()) {
             try {
-                processSource(source, result);
+                IngestionResult sourceResult = processSource(source);
+                result.listingsCreated += sourceResult.listingsCreated;
+                result.listingsUpdated += sourceResult.listingsUpdated;
+                result.listingsExpired += sourceResult.listingsExpired;
                 result.sourcesProcessed++;
             } catch (Exception e) {
                 String msg = source.getName() + ": " + e.getMessage();
@@ -88,13 +99,21 @@ public class IngestionService {
         return result;
     }
 
-    /** Per-source transaction so one bad source doesn't roll back the others. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processSource(Source source, IngestionResult result) {
+    /**
+     * Fetch outside any transaction (some boards take a minute), then persist
+     * in a fresh transaction. Counts are only reported if the commit succeeds.
+     */
+    IngestionResult processSource(Source source) {
         Adapter adapter = adapters.get(source.getPlatform());
         List<FetchedListing> fetched = adapter.fetchListings(source.getBoardId());
         log.info("Source {} returned {} listings", source.getName(), fetched.size());
 
+        IngestionResult result = new IngestionResult();
+        perSourceTx.executeWithoutResult(status -> persist(source, fetched, result));
+        return result;
+    }
+
+    private void persist(Source source, List<FetchedListing> fetched, IngestionResult result) {
         Instant now = Instant.now();
         String profile = normalizer.parsingProfile(source.getPlatform(), source.getBoardId());
 
