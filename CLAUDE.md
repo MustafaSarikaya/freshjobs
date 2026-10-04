@@ -1,4 +1,6 @@
-# job-scout
+# Fresh Jobs
+
+Spring Boot backend (`backend/`) + React SPA (`frontend/`), with the API contract in `openapi/openapi.yaml`.
 
 ## TDD Workflow — Mandatory
 
@@ -12,19 +14,24 @@ This project follows strict Test-Driven Development. All contributors (human and
 ### Rules
 - Never write production code without a corresponding test
 - Never break existing tests — if behavior changes intentionally, update the test in the same commit
-- Run `pytest` before every commit — it enforces 100% coverage
-- Do not lower the `--cov-fail-under` threshold without explicit justification
-- Use `# pragma: no cover` only with a comment explaining why
+- Run both test suites before every commit
+- The frontend enforces 100% coverage — do not lower the Vitest thresholds without explicit justification
+- Use `/* v8 ignore */` only with a comment explaining why
 
 ### Running Tests
 ```bash
-pip install -r requirements-dev.txt
-pytest
+# Backend (JDK 21 + Maven)
+cd backend && mvn test
+
+# Frontend
+cd frontend && npm ci && npm run lint && npm run test
 ```
 
-### Test Configuration
-- Framework: pytest + pytest-django
-- Config: `pyproject.toml`
-- Test settings: `jobscout/settings_test.py` (SQLite in-memory, inherits from main settings)
-- Coverage: 100% enforced via `--cov-fail-under=100`
-- Test location: `core/tests/` (one module per source module)
+### API changes
+- Edit `openapi/openapi.yaml` first; the backend generates its API interfaces from it at build time
+- Regenerate frontend types with `cd frontend && npm run generate:types`
+- Lint the spec with `npx -p @stoplight/spectral-cli spectral lint openapi/openapi.yaml`
+
+### Test Layout
+- Backend: JUnit 5 under `backend/src/test/java`, mirroring the main package structure
+- Frontend: Vitest + Testing Library, `*.test.ts(x)` next to each source file
