@@ -54,6 +54,8 @@ class WorkdayAdapter implements Adapter {
         List<int[]> pendingDetail = new ArrayList<>();
         List<String> pendingPath = new ArrayList<>();
 
+        String jobUrlBase = host + "/" + site;
+        long knownTotal = -1;
         int offset = 0;
         while (true) {
             Map<String, Object> body = new LinkedHashMap<>();
@@ -94,7 +96,7 @@ class WorkdayAdapter implements Adapter {
                 listings.add(new FetchedListing(
                     externalId,
                     (String) posting.get("title"),
-                    host + externalPath,
+                    jobUrlBase + externalPath,
                     locations,
                     ListingStatus.ACTIVE,
                     null,
@@ -103,8 +105,11 @@ class WorkdayAdapter implements Adapter {
             }
 
             offset += PAGE_SIZE;
-            Object total = data.get("total");
-            if (total instanceof Number n && offset >= n.longValue()) break;
+            if (knownTotal < 0 && data.get("total") instanceof Number n && n.longValue() > 0) {
+                knownTotal = n.longValue();
+            }
+            if (postings.size() < PAGE_SIZE) break;
+            if (knownTotal >= 0 && offset >= knownTotal) break;
         }
 
         if (!pendingDetail.isEmpty()) {

@@ -15,7 +15,7 @@ import org.springframework.web.client.RestClient;
 @Component
 class JibeAdapter implements Adapter {
 
-    private static final int PAGE_SIZE = 10;
+    private static final int PAGE_SIZE = 100;
 
     private final RestClient http;
 
@@ -32,11 +32,12 @@ class JibeAdapter implements Adapter {
         String host = normalizeHost(boardId);
         List<FetchedListing> out = new ArrayList<>();
         int offset = 0;
+        int page = 1;
 
         while (true) {
             Map<String, Object> data = http.get()
-                .uri("https://{host}/api/jobs?from={from}&size={size}",
-                    host, offset, PAGE_SIZE)
+                .uri("https://{host}/api/jobs?page={page}&limit={limit}",
+                    host, page++, PAGE_SIZE)
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .body(Map.class);
