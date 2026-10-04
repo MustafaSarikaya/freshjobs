@@ -70,7 +70,10 @@ class PhenomAdapter implements Adapter {
                 List<String> locations;
                 Object multi = job.get("multi_location_array");
                 if (multi instanceof List<?> ml && !ml.isEmpty()) {
+                    // Entries are {latlong, location} objects; older payloads used plain strings.
                     locations = ml.stream()
+                        .map(e -> e instanceof Map<?, ?> m ? m.get("location") : e)
+                        .filter(v -> v instanceof String s && !s.isBlank())
                         .map(Object::toString)
                         .toList();
                 } else if (job.get("multi_location") instanceof List<?> oldStyle
