@@ -2,9 +2,9 @@ import { cn } from "@/lib/utils";
 import type { RunStatus } from "@/types/api";
 
 const TONES: Record<RunStatus, string> = {
-  completed: "bg-green-100 text-green-900",
-  failed: "bg-red-100 text-red-900",
-  running: "bg-blue-100 text-blue-900",
+  completed: "bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-200",
+  failed: "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200",
+  running: "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200",
   pending: "bg-muted text-muted-foreground",
 };
 
