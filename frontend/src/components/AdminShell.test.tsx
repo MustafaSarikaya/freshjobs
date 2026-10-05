@@ -39,6 +39,14 @@ describe("AdminShell", () => {
       "href",
       "/admin/runs",
     );
+    expect(screen.getByRole("link", { name: /^sources$/i })).toHaveAttribute(
+      "href",
+      "/admin/sources",
+    );
+    expect(screen.getByRole("link", { name: /^locations$/i })).toHaveAttribute(
+      "href",
+      "/admin/locations",
+    );
   });
 
   it("renders the child route via Outlet", () => {

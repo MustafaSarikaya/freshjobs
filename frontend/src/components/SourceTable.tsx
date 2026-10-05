@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const PLATFORM_LABELS: Record<string, string> = {
+export const PLATFORM_LABELS: Record<string, string> = {
   ASHBY: "Ashby",
   BAMBOOHR: "BambooHR",
   GREENHOUSE: "Greenhouse",
@@ -19,7 +19,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   WORKDAY: "Workday",
 };
 
-function SourceStatusBadge({ active }: { active: boolean }) {
+export function SourceStatusBadge({ active }: { active: boolean }) {
   return (
     <span
       className={cn(

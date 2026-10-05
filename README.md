@@ -23,7 +23,7 @@ cd frontend && npm run test
 
 The public site has no sign-in. Saved views and "seen" job markers are kept in the visitor's HTTP session only and are lost when the session expires.
 
-The admin area lives at `/admin` (sign in at `/admin/login`). Only staff and superuser accounts can sign in. It holds the ingestion run history.
+The admin area lives at `/admin` (sign in at `/admin/login`). Only staff and superuser accounts can sign in. It manages sources, location tags, and ingestion runs.
 
 ### API
 
@@ -32,7 +32,7 @@ The contract is `openapi/openapi.yaml`, served under `/api/v1`. Swagger UI is av
 | Area | Auth |
 |------|------|
 | Health, jobs, sources (read), locations (read), saved views | None |
-| `/api/v1/runs` (read) | Admin session |
+| `/api/v1/runs` (read) and `/api/v1/admin/**` | Admin session |
 | `POST /api/v1/runs` | Admin session or `INGEST_API_KEY` bearer token |
 
 ## Advanced Filter Expression Contract

@@ -1,5 +1,9 @@
+import { useState } from "react";
+
+import { useTriggerRun } from "@/api/admin";
 import { useRuns } from "@/api/runs";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -38,15 +42,36 @@ function formatTimestamp(value: string | null) {
 
 export function RunsPage() {
   const { data: runs = [], isLoading, isError } = useRuns();
+  const triggerRun = useTriggerRun();
+  const [triggerMessage, setTriggerMessage] = useState<string | null>(null);
+
+  async function handleTrigger() {
+    setTriggerMessage(null);
+    try {
+      await triggerRun.mutateAsync();
+      setTriggerMessage("Ingestion started. It will appear below shortly.");
+    } catch {
+      setTriggerMessage("Could not start ingestion.");
+    }
+  }
 
   return (
     <section className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-normal">Ingestion Runs</h1>
-        <p className="text-sm text-muted-foreground">
-          Recent scraping runs and their persisted result counts.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-normal">Ingestion Runs</h1>
+          <p className="text-sm text-muted-foreground">
+            Recent scraping runs and their persisted result counts.
+          </p>
+        </div>
+        <Button type="button" onClick={handleTrigger} disabled={triggerRun.isPending}>
+          {triggerRun.isPending ? "Starting…" : "Run ingestion now"}
+        </Button>
       </div>
+
+      {triggerMessage ? (
+        <p className="text-sm text-muted-foreground">{triggerMessage}</p>
+      ) : null}
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading runs…</p>

@@ -85,7 +85,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").authenticated()
                 // RunsController checks for an admin session or the ingest key.
                 .requestMatchers(TRIGGER_RUN).permitAll()
-                .requestMatchers("/api/v1/runs", "/api/v1/runs/**")
+                .requestMatchers("/api/v1/runs", "/api/v1/runs/**", "/api/v1/admin/**")
                     .hasAnyRole("STAFF", "SUPERUSER")
                 .anyRequest().permitAll())
             .addFilterAfter(csrfCookieFilter(), BasicAuthenticationFilter.class);

@@ -30,6 +30,8 @@ tags:
     description: Session-scoped filter, sort, and column configurations
   - name: Locations
     description: Location tag listing
+  - name: Admin
+    description: Source and location tag management. Admin only.
 
 paths:
   # ------------------------------------------------------------------
@@ -376,6 +378,108 @@ paths:
           description: Deleted
         '404': { $ref: '#/components/responses/NotFound' }
 
+  # ------------------------------------------------------------------
+  # Admin
+  # ------------------------------------------------------------------
+  /admin/sources:
+    post:
+      tags: [Admin]
+      operationId: createSource
+      summary: Create a source
+      description: Adds a job board to the ingestion source list.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SourceInput' }
+      responses:
+        '201':
+          description: Source created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Source' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  /admin/sources/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      tags: [Admin]
+      operationId: updateSource
+      summary: Update a source
+      description: Replaces a source's name, platform, board id, and active flag.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SourceInput' }
+      responses:
+        '200':
+          description: Updated source
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Source' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    delete:
+      tags: [Admin]
+      operationId: deleteSource
+      summary: Delete a source
+      description: Deletes a source together with all of its job listings.
+      security:
+        - cookieAuth: []
+      responses:
+        '204':
+          description: Deleted
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/locations/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      tags: [Admin]
+      operationId: updateLocationTag
+      summary: Correct a location tag's geography
+      description: Sets country, region, and city by hand. The background geocoder leaves the tag alone afterwards, including when the country is cleared.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LocationTagUpdate' }
+      responses:
+        '200':
+          description: Updated location tag
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LocationTag' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
 components:
   # ==================================================================
   # Security
@@ -458,6 +562,11 @@ components:
           schema: { $ref: '#/components/schemas/Problem' }
     NotFound:
       description: Resource not found
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Conflicts with an existing resource
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -546,7 +655,23 @@ components:
         boardId:   { type: string, minLength: 1, maxLength: 255 }
         isActive:  { type: boolean }
 
+    SourceInput:
+      type: object
+      required: [name, platform, boardId, isActive]
+      properties:
+        name:      { type: string, minLength: 1, maxLength: 255 }
+        platform:  { $ref: '#/components/schemas/SourcePlatform' }
+        boardId:   { type: string, minLength: 1, maxLength: 255 }
+        isActive:  { type: boolean }
+
     # ---------- LocationTag --------------------------------------------
+    LocationTagUpdate:
+      type: object
+      properties:
+        countryCode: { type: ['string', 'null'], maxLength: 2, minLength: 2 }
+        regionCode:  { type: ['string', 'null'], maxLength: 10 }
+        city:        { type: ['string', 'null'], maxLength: 255 }
+
     LocationTag:
       type: object
       required: [id, name]

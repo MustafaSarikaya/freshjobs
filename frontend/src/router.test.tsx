@@ -38,6 +38,11 @@ describe("router", () => {
     expect(findRouteByPath(router.routes, "/admin/runs")).toBeDefined();
   });
 
+  it("routes /admin/sources and /admin/locations through the admin area", () => {
+    expect(findRouteByPath(router.routes, "/admin/sources")).toBeDefined();
+    expect(findRouteByPath(router.routes, "/admin/locations")).toBeDefined();
+  });
+
   it("routes /admin to the admin index", () => {
     expect(findRouteByPath(router.routes, "/admin")).toBeDefined();
   });

@@ -21,6 +21,18 @@ export function AdminShell({ onSignOut = () => void logout() }: AdminShellProps)
           >
             Runs
           </Link>
+          <Link
+            to="/admin/sources"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Sources
+          </Link>
+          <Link
+            to="/admin/locations"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Locations
+          </Link>
           <button
             type="button"
             onClick={onSignOut}

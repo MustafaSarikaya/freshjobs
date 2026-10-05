@@ -3,6 +3,8 @@ import { Navigate, createBrowserRouter } from "react-router-dom";
 import { App } from "@/App";
 import { AdminShell } from "@/components/AdminShell";
 import { AppShell } from "@/components/AppShell";
+import { AdminLocationsPage } from "@/routes/AdminLocationsPage";
+import { AdminSourcesPage } from "@/routes/AdminSourcesPage";
 import { RequireAuth } from "@/lib/RequireAuth";
 import { JobsPage } from "@/routes/JobsPage";
 import { LoginPage } from "@/routes/LoginPage";
@@ -40,6 +42,14 @@ export const router = createBrowserRouter([
           {
             path: "/admin/runs",
             element: <RunsPage />,
+          },
+          {
+            path: "/admin/sources",
+            element: <AdminSourcesPage />,
+          },
+          {
+            path: "/admin/locations",
+            element: <AdminLocationsPage />,
           },
         ],
       },
