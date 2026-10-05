@@ -17,7 +17,9 @@ public class JobScoutUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // Accounts exist only for the admin area, so non-admins cannot sign in.
         return users.findByUsername(username)
+            .filter(user -> user.isStaff() || user.isSuperuser())
             .map(JobScoutUserDetails::new)
             .orElseThrow(() -> new UsernameNotFoundException("Unknown user: " + username));
     }

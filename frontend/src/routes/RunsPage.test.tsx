@@ -1,5 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import { useTriggerRun } from "@/api/admin";
 
 import { useRuns } from "@/api/runs";
 import type { Run } from "@/types/api";
@@ -9,6 +12,18 @@ import { RunsPage } from "./RunsPage";
 vi.mock("@/api/runs", () => ({
   useRuns: vi.fn(),
 }));
+vi.mock("@/api/admin", () => ({
+  useTriggerRun: vi.fn(),
+}));
+
+const trigger = vi.fn();
+
+beforeEach(() => {
+  trigger.mockReset().mockResolvedValue(undefined);
+  vi.mocked(useTriggerRun).mockReturnValue(
+    { mutateAsync: trigger, isPending: false } as unknown as ReturnType<typeof useTriggerRun>,
+  );
+});
 
 const mockUseRuns = vi.mocked(useRuns);
 
@@ -25,6 +40,36 @@ function mockRunsState(state: {
 }
 
 describe("RunsPage", () => {
+  it("triggers an ingestion run", async () => {
+    mockRunsState({ data: [] });
+    render(<RunsPage />);
+
+    await userEvent.click(screen.getByRole("button", { name: /run ingestion now/i }));
+
+    await waitFor(() => expect(trigger).toHaveBeenCalledOnce());
+    expect(await screen.findByText(/ingestion started/i)).toBeInTheDocument();
+  });
+
+  it("reports a failed trigger", async () => {
+    trigger.mockRejectedValue(new Error("boom"));
+    mockRunsState({ data: [] });
+    render(<RunsPage />);
+
+    await userEvent.click(screen.getByRole("button", { name: /run ingestion now/i }));
+
+    expect(await screen.findByText(/could not start ingestion/i)).toBeInTheDocument();
+  });
+
+  it("disables the trigger while a run is being started", () => {
+    vi.mocked(useTriggerRun).mockReturnValue(
+      { mutateAsync: trigger, isPending: true } as unknown as ReturnType<typeof useTriggerRun>,
+    );
+    mockRunsState({ data: [] });
+    render(<RunsPage />);
+
+    expect(screen.getByRole("button", { name: /starting/i })).toBeDisabled();
+  });
+
   it("shows a loading state", () => {
     mockRunsState({ isLoading: true });
     render(<RunsPage />);

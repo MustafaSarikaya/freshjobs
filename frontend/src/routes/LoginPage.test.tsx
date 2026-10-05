@@ -21,7 +21,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderLoginPage(initialPath = "/accounts/login/?next=/sources/") {
+function renderLoginPage(initialPath = "/admin/login/?next=/admin/runs") {
   const onRedirect = vi.fn();
   render(
     <MemoryRouter
@@ -30,7 +30,7 @@ function renderLoginPage(initialPath = "/accounts/login/?next=/sources/") {
     >
       <Routes>
         <Route
-          path="/accounts/login/"
+          path="/admin/login/"
           element={<LoginPage onRedirect={onRedirect} />}
         />
       </Routes>
@@ -42,12 +42,13 @@ function renderLoginPage(initialPath = "/accounts/login/?next=/sources/") {
 describe("LoginPage", () => {
   it("renders username and password fields with Django-compatible names", () => {
     renderLoginPage();
+    expect(screen.getByText("Fresh Jobs")).toBeInTheDocument();
     expect(screen.getByLabelText("Username")).toHaveAttribute("name", "username");
     expect(screen.getByLabelText("Password")).toHaveAttribute("name", "password");
   });
 
   it("submits credentials and redirects to next", async () => {
-    mockLogin.mockResolvedValue("/sources/");
+    mockLogin.mockResolvedValue("/admin/runs");
     const onRedirect = renderLoginPage();
 
     await userEvent.type(screen.getByLabelText("Username"), "e2e");
@@ -58,15 +59,15 @@ describe("LoginPage", () => {
       expect(mockLogin).toHaveBeenCalledWith({
         username: "e2e",
         password: "e2e-pass-123",
-        next: "/sources/",
+        next: "/admin/runs",
       }),
     );
-    expect(onRedirect).toHaveBeenCalledWith("/sources/");
+    expect(onRedirect).toHaveBeenCalledWith("/admin/runs");
   });
 
-  it("defaults next to /", async () => {
-    mockLogin.mockResolvedValue("/");
-    renderLoginPage("/accounts/login/");
+  it("defaults next to /admin/", async () => {
+    mockLogin.mockResolvedValue("/admin/");
+    renderLoginPage("/admin/login/");
 
     await userEvent.type(screen.getByLabelText("Username"), "e2e");
     await userEvent.type(screen.getByLabelText("Password"), "e2e-pass-123");
@@ -76,7 +77,7 @@ describe("LoginPage", () => {
       expect(mockLogin).toHaveBeenCalledWith({
         username: "e2e",
         password: "e2e-pass-123",
-        next: "/",
+        next: "/admin/",
       }),
     );
   });

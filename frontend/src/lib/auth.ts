@@ -73,5 +73,5 @@ export async function logout(
     headers,
     credentials: "same-origin",
   });
-  redirect("/accounts/login/");
+  redirect("/admin/login/");
 }

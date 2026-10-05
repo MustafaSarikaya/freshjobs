@@ -34,8 +34,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Authenticate and start a session
-         * @description Authenticates with username and password, then creates a server-side session cookie.
+         * Sign in as an admin
+         * @description Authenticates a staff or superuser account with username and password, then creates a server-side session cookie. Non-admin accounts cannot sign in.
          */
         post: operations["login"];
         delete?: never;
@@ -72,8 +72,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get the currently-authenticated user
-         * @description Returns basic identity information for the user associated with the current session.
+         * Get the signed-in admin
+         * @description Returns basic identity information for the admin associated with the current session.
          */
         get: operations["getCurrentUser"];
         put?: never;
@@ -114,7 +114,7 @@ export interface paths {
         /**
          * List job listings with filter, sort, and pagination
          * @description The core jobs endpoint. Supports a recursive filter DSL, multi-field
-         *     sorting (including the user-specific `seen` sort), and page-based
+         *     sorting (including the session-specific `seen` sort), and page-based
          *     pagination.
          */
         get: operations["listJobs"];
@@ -157,7 +157,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mark a job as seen by the current user
+         * Mark a job as seen for the current session
          * @description Idempotent — re-marking has no effect.
          */
         post: operations["markJobSeen"];
@@ -196,13 +196,13 @@ export interface paths {
         };
         /**
          * List ingestion run history (most recent first)
-         * @description Returns a paginated list of ingestion runs for the current user, ordered by newest run first.
+         * @description Returns a paginated list of ingestion runs, ordered by newest run first.
          */
         get: operations["listRuns"];
         put?: never;
         /**
          * Trigger a new ingestion run
-         * @description Spawns ingestion asynchronously. Returns the created `Run` immediately with status PENDING.
+         * @description Spawns ingestion asynchronously. Returns the created `Run` immediately with status PENDING. Requires an admin session or the ingest API key as a bearer token.
          */
         post: operations["triggerRun"];
         delete?: never;
@@ -220,7 +220,7 @@ export interface paths {
         };
         /**
          * Get a single run
-         * @description Returns one ingestion run by id when it belongs to the current user.
+         * @description Returns one ingestion run by id.
          */
         get: operations["getRun"];
         put?: never;
@@ -239,14 +239,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List the current user's saved views
-         * @description Returns saved views owned by the current user, ordered by name.
+         * List the current session's saved views
+         * @description Returns saved views held in the current session, ordered by name.
          */
         get: operations["listSavedViews"];
         put?: never;
         /**
-         * Create a new saved view for the current user
-         * @description Persists the current user's filter, sort, column, and page-size preferences as a named saved view.
+         * Create a new saved view for the current session
+         * @description Stores the filter, sort, column, and page-size preferences as a named saved view in the current session. Saved views are not persisted and expire with the session.
          */
         post: operations["createSavedView"];
         delete?: never;
@@ -266,20 +266,88 @@ export interface paths {
         };
         /**
          * Get a saved view by id
-         * @description Returns one saved view by id when it belongs to the current user.
+         * @description Returns one saved view by id from the current session.
          */
         get: operations["getSavedView"];
         /**
          * Replace a saved view
-         * @description Replaces a saved view owned by the current user with the supplied preferences.
+         * @description Replaces a saved view in the current session with the supplied preferences.
          */
         put: operations["updateSavedView"];
         post?: never;
         /**
          * Delete a saved view
-         * @description Deletes a saved view owned by the current user.
+         * @description Deletes a saved view from the current session.
          */
         delete: operations["deleteSavedView"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a source
+         * @description Adds a job board to the ingestion source list.
+         */
+        post: operations["createSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/sources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update a source
+         * @description Replaces a source's name, platform, board id, and active flag.
+         */
+        put: operations["updateSource"];
+        post?: never;
+        /**
+         * Delete a source
+         * @description Deletes a source together with all of its job listings.
+         */
+        delete: operations["deleteSource"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/locations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Correct a location tag's geography
+         * @description Sets country, region, and city by hand. The background geocoder leaves the tag alone afterwards, including when the country is cleared.
+         */
+        put: operations["updateLocationTag"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -350,6 +418,17 @@ export interface components {
             boardId: string;
             isActive: boolean;
         };
+        SourceInput: {
+            name: string;
+            platform: components["schemas"]["SourcePlatform"];
+            boardId: string;
+            isActive: boolean;
+        };
+        LocationTagUpdate: {
+            countryCode?: string | null;
+            regionCode?: string | null;
+            city?: string | null;
+        };
         LocationTag: {
             /** Format: int64 */
             id: number;
@@ -384,7 +463,7 @@ export interface components {
             lastSeenAt: string;
             /** Format: date-time */
             expiredAt?: string | null;
-            /** @description Whether the current user has marked this listing as seen. */
+            /** @description Whether this listing was marked as seen in the current session. */
             seen: boolean;
         };
         JobListingPage: {
@@ -543,8 +622,26 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description Admin access required */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description Resource not found */
         NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Conflicts with an existing resource */
+        Conflict: {
             headers: {
                 [name: string]: unknown;
             };
@@ -570,7 +667,7 @@ export interface components {
         /**
          * @description Multi-field sort. Comma-separated `field:dir` tokens, e.g.
          *     `first_seen_at:desc,title:asc`. The pseudo-field `seen` sorts by
-         *     whether the current user has marked the listing as seen.
+         *     whether the listing was marked as seen in the current session.
          */
         SortParam: string[];
         /**
@@ -699,7 +796,6 @@ export interface operations {
                     "application/json": components["schemas"]["Source"][];
                 };
             };
-            401: components["responses"]["Unauthorized"];
         };
     };
     listJobs: {
@@ -712,7 +808,7 @@ export interface operations {
                 /**
                  * @description Multi-field sort. Comma-separated `field:dir` tokens, e.g.
                  *     `first_seen_at:desc,title:asc`. The pseudo-field `seen` sorts by
-                 *     whether the current user has marked the listing as seen.
+                 *     whether the listing was marked as seen in the current session.
                  */
                 sort?: components["parameters"]["SortParam"];
                 /**
@@ -737,7 +833,6 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
@@ -768,7 +863,6 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
         };
     };
     markJobSeen: {
@@ -791,7 +885,6 @@ export interface operations {
                     "application/json": components["schemas"]["MarkSeenResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -813,7 +906,6 @@ export interface operations {
                     "application/json": components["schemas"]["LocationTag"][];
                 };
             };
-            401: components["responses"]["Unauthorized"];
         };
     };
     listRuns: {
@@ -840,6 +932,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     triggerRun: {
@@ -890,6 +983,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -911,7 +1005,6 @@ export interface operations {
                     "application/json": components["schemas"]["SavedView"][];
                 };
             };
-            401: components["responses"]["Unauthorized"];
         };
     };
     createSavedView: {
@@ -939,7 +1032,6 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };
@@ -963,7 +1055,6 @@ export interface operations {
                     "application/json": components["schemas"]["SavedView"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -992,7 +1083,6 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
         };
@@ -1015,8 +1105,122 @@ export interface operations {
                 };
                 content?: never;
             };
-            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    createSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceInput"];
+            };
+        };
+        responses: {
+            /** @description Source created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Source"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    updateSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceInput"];
+            };
+        };
+        responses: {
+            /** @description Updated source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Source"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    deleteSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateLocationTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocationTagUpdate"];
+            };
+        };
+        responses: {
+            /** @description Updated location tag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationTag"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
 }

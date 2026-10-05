@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Job Scout API
+  title: Fresh Jobs API
   version: 1.0.0
   description: |
     Internal API for the job-scout job aggregator. This spec is the contract:
@@ -15,23 +15,23 @@ info:
 servers:
   - url: /api/v1
     description: Default base URL (versioned)
-security:
-  - cookieAuth: []
 tags:
   - name: Health
     description: Liveness check
   - name: Auth
-    description: Session login + logout
+    description: Admin sign-in (staff and superuser accounts only)
   - name: Jobs
     description: Job listings, filtering, sorting, faceting, mark-as-seen
   - name: Sources
     description: Job source configuration
   - name: Runs
-    description: Ingestion runs (history + manual triggers)
+    description: Ingestion runs (history + manual triggers). Admin only.
   - name: SavedViews
-    description: User-saved filter, sort, and column configurations
+    description: Session-scoped filter, sort, and column configurations
   - name: Locations
     description: Location tag listing
+  - name: Admin
+    description: Source and location tag management. Admin only.
 
 paths:
   # ------------------------------------------------------------------
@@ -60,8 +60,8 @@ paths:
     post:
       tags: [Auth]
       operationId: login
-      summary: Authenticate and start a session
-      description: Authenticates with username and password, then creates a server-side session cookie.
+      summary: Sign in as an admin
+      description: Authenticates a staff or superuser account with username and password, then creates a server-side session cookie. Non-admin accounts cannot sign in.
       security: []
       requestBody:
         required: true
@@ -82,6 +82,8 @@ paths:
       operationId: logout
       summary: End the current session
       description: Invalidates the current server-side session and clears the security context.
+      security:
+        - cookieAuth: []
       responses:
         '204':
           description: Session ended
@@ -91,8 +93,10 @@ paths:
     get:
       tags: [Auth]
       operationId: getCurrentUser
-      summary: Get the currently-authenticated user
-      description: Returns basic identity information for the user associated with the current session.
+      summary: Get the signed-in admin
+      description: Returns basic identity information for the admin associated with the current session.
+      security:
+        - cookieAuth: []
       responses:
         '200':
           description: Current user
@@ -124,7 +128,6 @@ paths:
                   platform: GREENHOUSE
                   boardId: acme
                   isActive: true
-        '401': { $ref: '#/components/responses/Unauthorized' }
 
   # ------------------------------------------------------------------
   # Jobs
@@ -136,7 +139,7 @@ paths:
       summary: List job listings with filter, sort, and pagination
       description: |
         The core jobs endpoint. Supports a recursive filter DSL, multi-field
-        sorting (including the user-specific `seen` sort), and page-based
+        sorting (including the session-specific `seen` sort), and page-based
         pagination.
       parameters:
         - $ref: '#/components/parameters/PageParam'
@@ -150,7 +153,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/JobListingPage' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
 
   /jobs/facets:
@@ -181,13 +183,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/FacetsResponse' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /jobs/{id}/seen:
     post:
       tags: [Jobs]
       operationId: markJobSeen
-      summary: Mark a job as seen by the current user
+      summary: Mark a job as seen for the current session
       description: Idempotent — re-marking has no effect.
       parameters:
         - name: id
@@ -200,7 +201,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MarkSeenResponse' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   # ------------------------------------------------------------------
@@ -220,7 +220,6 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/LocationTag' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
 
   # ------------------------------------------------------------------
   # Runs
@@ -230,7 +229,9 @@ paths:
       tags: [Runs]
       operationId: listRuns
       summary: List ingestion run history (most recent first)
-      description: Returns a paginated list of ingestion runs for the current user, ordered by newest run first.
+      description: Returns a paginated list of ingestion runs, ordered by newest run first.
+      security:
+        - cookieAuth: []
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
@@ -241,11 +242,15 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RunPage' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Runs]
       operationId: triggerRun
       summary: Trigger a new ingestion run
-      description: Spawns ingestion asynchronously. Returns the created `Run` immediately with status PENDING.
+      description: Spawns ingestion asynchronously. Returns the created `Run` immediately with status PENDING. Requires an admin session or the ingest API key as a bearer token.
+      security:
+        - cookieAuth: []
+        - ingestApiKey: []
       requestBody:
         required: false
         content:
@@ -268,7 +273,9 @@ paths:
       tags: [Runs]
       operationId: getRun
       summary: Get a single run
-      description: Returns one ingestion run by id when it belongs to the current user.
+      description: Returns one ingestion run by id.
+      security:
+        - cookieAuth: []
       parameters:
         - name: id
           in: path
@@ -281,6 +288,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Run' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   # ------------------------------------------------------------------
@@ -290,8 +298,8 @@ paths:
     get:
       tags: [SavedViews]
       operationId: listSavedViews
-      summary: List the current user's saved views
-      description: Returns saved views owned by the current user, ordered by name.
+      summary: List the current session's saved views
+      description: Returns saved views held in the current session, ordered by name.
       responses:
         '200':
           description: Saved views (ordered by name)
@@ -300,12 +308,11 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/SavedView' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [SavedViews]
       operationId: createSavedView
-      summary: Create a new saved view for the current user
-      description: Persists the current user's filter, sort, column, and page-size preferences as a named saved view.
+      summary: Create a new saved view for the current session
+      description: Stores the filter, sort, column, and page-size preferences as a named saved view in the current session. Saved views are not persisted and expire with the session.
       requestBody:
         required: true
         content:
@@ -322,7 +329,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SavedView' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
 
   /views/{id}:
@@ -335,20 +341,19 @@ paths:
       tags: [SavedViews]
       operationId: getSavedView
       summary: Get a saved view by id
-      description: Returns one saved view by id when it belongs to the current user.
+      description: Returns one saved view by id from the current session.
       responses:
         '200':
           description: Saved view
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SavedView' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [SavedViews]
       operationId: updateSavedView
       summary: Replace a saved view
-      description: Replaces a saved view owned by the current user with the supplied preferences.
+      description: Replaces a saved view in the current session with the supplied preferences.
       requestBody:
         required: true
         content:
@@ -361,19 +366,119 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SavedView' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
     delete:
       tags: [SavedViews]
       operationId: deleteSavedView
       summary: Delete a saved view
-      description: Deletes a saved view owned by the current user.
+      description: Deletes a saved view from the current session.
+      responses:
+        '204':
+          description: Deleted
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------------------------------------------
+  # Admin
+  # ------------------------------------------------------------------
+  /admin/sources:
+    post:
+      tags: [Admin]
+      operationId: createSource
+      summary: Create a source
+      description: Adds a job board to the ingestion source list.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SourceInput' }
+      responses:
+        '201':
+          description: Source created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Source' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  /admin/sources/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      tags: [Admin]
+      operationId: updateSource
+      summary: Update a source
+      description: Replaces a source's name, platform, board id, and active flag.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SourceInput' }
+      responses:
+        '200':
+          description: Updated source
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Source' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    delete:
+      tags: [Admin]
+      operationId: deleteSource
+      summary: Delete a source
+      description: Deletes a source together with all of its job listings.
+      security:
+        - cookieAuth: []
       responses:
         '204':
           description: Deleted
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/locations/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      tags: [Admin]
+      operationId: updateLocationTag
+      summary: Correct a location tag's geography
+      description: Sets country, region, and city by hand. The background geocoder leaves the tag alone afterwards, including when the country is cleared.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LocationTagUpdate' }
+      responses:
+        '200':
+          description: Updated location tag
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LocationTag' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
 
 components:
   # ==================================================================
@@ -384,7 +489,11 @@ components:
       type: apiKey
       in: cookie
       name: JSESSIONID
-      description: Spring Security session cookie
+      description: Spring Security session cookie (admin sign-in)
+    ingestApiKey:
+      type: http
+      scheme: bearer
+      description: Shared ingest API key (INGEST_API_KEY), used by the scheduled ingestion job
 
   # ==================================================================
   # Reusable parameters
@@ -415,7 +524,7 @@ components:
       description: |
         Multi-field sort. Comma-separated `field:dir` tokens, e.g.
         `first_seen_at:desc,title:asc`. The pseudo-field `seen` sorts by
-        whether the current user has marked the listing as seen.
+        whether the listing was marked as seen in the current session.
       required: false
       style: form
       explode: false
@@ -446,8 +555,18 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Admin access required
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     NotFound:
       description: Resource not found
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Conflicts with an existing resource
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -536,7 +655,23 @@ components:
         boardId:   { type: string, minLength: 1, maxLength: 255 }
         isActive:  { type: boolean }
 
+    SourceInput:
+      type: object
+      required: [name, platform, boardId, isActive]
+      properties:
+        name:      { type: string, minLength: 1, maxLength: 255 }
+        platform:  { $ref: '#/components/schemas/SourcePlatform' }
+        boardId:   { type: string, minLength: 1, maxLength: 255 }
+        isActive:  { type: boolean }
+
     # ---------- LocationTag --------------------------------------------
+    LocationTagUpdate:
+      type: object
+      properties:
+        countryCode: { type: ['string', 'null'], maxLength: 2, minLength: 2 }
+        regionCode:  { type: ['string', 'null'], maxLength: 10 }
+        city:        { type: ['string', 'null'], maxLength: 255 }
+
     LocationTag:
       type: object
       required: [id, name]
@@ -585,7 +720,7 @@ components:
         expiredAt:       { type: ['string', 'null'], format: date-time }
         seen:
           type: boolean
-          description: Whether the current user has marked this listing as seen.
+          description: Whether this listing was marked as seen in the current session.
 
     JobListingPage:
       type: object

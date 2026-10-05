@@ -1,16 +1,11 @@
 .git
 .gitignore
-.venv
-__pycache__
-*.pyc
 .env
 openspec/
 .github/
 .claude/
 .codex/
 .opencode/
-staticfiles/
-db.sqlite3
 README.md
 docker-compose.yml
 .DS_Store
@@ -22,5 +17,3 @@ frontend/dist/
 frontend/coverage/
 backend/target/
 node_modules/
-playwright-report/
-test-results/

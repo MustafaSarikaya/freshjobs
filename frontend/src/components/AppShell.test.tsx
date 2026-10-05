@@ -22,7 +22,7 @@ function renderShell(initialPath = "/runs") {
 describe("AppShell", () => {
   it("renders the brand and navigation links", () => {
     renderShell();
-    expect(screen.getByRole("link", { name: /job scout/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /fresh jobs/i })).toHaveAttribute(
       "href",
       "/",
     );
@@ -30,18 +30,12 @@ describe("AppShell", () => {
       "href",
       "/",
     );
-    expect(screen.getByRole("link", { name: /^runs$/i })).toHaveAttribute(
-      "href",
-      "/runs",
-    );
+    expect(screen.queryByRole("link", { name: /^runs$/i })).toBeNull();
     expect(screen.getByRole("link", { name: /^sources$/i })).toHaveAttribute(
       "href",
       "/sources",
     );
-    expect(screen.getByRole("link", { name: /^admin$/i })).toHaveAttribute(
-      "href",
-      "/admin/",
-    );
+    expect(screen.queryByRole("link", { name: /^admin$/i })).toBeNull();
   });
 
   it("renders the child route via Outlet", () => {

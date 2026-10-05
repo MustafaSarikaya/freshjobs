@@ -5,16 +5,12 @@ import com.jobscout.api.generated.model.FacetBucket;
 import com.jobscout.api.generated.model.JobListingPage;
 import com.jobscout.api.generated.model.MarkSeenResponse;
 import com.jobscout.domain.JobListing;
-import com.jobscout.domain.SeenListing;
-import com.jobscout.domain.User;
 import com.jobscout.filter.FilterExpressionEvaluator;
 import com.jobscout.mapper.JobListingMapper;
 import com.jobscout.repository.JobListingRepository;
-import com.jobscout.repository.SeenListingRepository;
-import com.jobscout.security.CurrentUserService;
 import com.jobscout.service.JobFacetsService;
-import com.jobscout.service.SeenSet;
 import com.jobscout.service.SortParser;
+import com.jobscout.session.SessionPreferences;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Page;
@@ -32,24 +28,18 @@ import org.springframework.web.server.ResponseStatusException;
 class JobsController implements JobsApi {
 
     private final JobListingRepository listings;
-    private final SeenListingRepository seenRepo;
     private final FilterExpressionEvaluator filterEval;
     private final JobFacetsService facetsService;
-    private final SeenSet seenSet;
-    private final CurrentUserService currentUser;
+    private final SessionPreferences prefs;
 
     JobsController(JobListingRepository listings,
-                   SeenListingRepository seenRepo,
                    FilterExpressionEvaluator filterEval,
                    JobFacetsService facetsService,
-                   SeenSet seenSet,
-                   CurrentUserService currentUser) {
+                   SessionPreferences prefs) {
         this.listings = listings;
-        this.seenRepo = seenRepo;
         this.filterEval = filterEval;
         this.facetsService = facetsService;
-        this.seenSet = seenSet;
-        this.currentUser = currentUser;
+        this.prefs = prefs;
     }
 
     // Spring Boot runs with open-in-view=false, so the JPA session closes
@@ -72,9 +62,7 @@ class JobsController implements JobsApi {
                            pageSize == null ? 50 : pageSize,
                            sortObj));
 
-        User user = currentUser.current();
-        var seenIds = seenSet.forUserAndListings(
-            user,
+        var seenIds = prefs.seenAmong(
             result.getContent().stream().map(JobListing::getId).toList());
 
         return ResponseEntity.ok(JobListingMapper.toPage(result, seenIds));
@@ -93,13 +81,7 @@ class JobsController implements JobsApi {
         JobListing listing = listings.findById(id)
             .orElseThrow(() -> new ResponseStatusException(
                 org.springframework.http.HttpStatus.NOT_FOUND, "Job not found"));
-        User user = currentUser.current();
-        if (!seenRepo.existsByUserAndListing(user, listing)) {
-            SeenListing seen = new SeenListing();
-            seen.setUser(user);
-            seen.setListing(listing);
-            seenRepo.save(seen);
-        }
+        prefs.markSeen(listing.getId());
         return ResponseEntity.ok(new MarkSeenResponse(listing.getId(), true));
     }
 }
