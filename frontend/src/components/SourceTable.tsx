@@ -24,7 +24,7 @@ export function SourceStatusBadge({ active }: { active: boolean }) {
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-        active ? "bg-green-100 text-green-900" : "bg-muted text-muted-foreground",
+        active ? "bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-200" : "bg-muted text-muted-foreground",
       )}
     >
       {active ? "Active" : "Inactive"}

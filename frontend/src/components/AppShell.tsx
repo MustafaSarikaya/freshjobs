@@ -1,5 +1,7 @@
 import { Link, Outlet } from "react-router-dom";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 export function AppShell() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -17,6 +19,9 @@ export function AppShell() {
           >
             Sources
           </Link>
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </nav>
       </header>
       <main className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">

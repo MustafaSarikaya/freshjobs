@@ -1,5 +1,6 @@
 import { Link, Outlet } from "react-router-dom";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { logout } from "@/lib/auth";
 
 type AdminShellProps = {
@@ -40,6 +41,7 @@ export function AdminShell({ onSignOut = () => void logout() }: AdminShellProps)
           >
             Sign out
           </button>
+          <ThemeToggle />
         </nav>
       </header>
       <main className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
