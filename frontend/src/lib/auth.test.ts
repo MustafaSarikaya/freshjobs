@@ -103,6 +103,6 @@ describe("logout", () => {
     expect(new Headers(spy.mock.calls[0][1]?.headers).get("X-CSRFToken")).toBe(
       "login-token",
     );
-    expect(redirect).toHaveBeenCalledWith("/accounts/login/");
+    expect(redirect).toHaveBeenCalledWith("/admin/login/");
   });
 });

@@ -7,19 +7,21 @@ function isAuthError(error: unknown) {
   return error instanceof ApiError && (error.status === 401 || error.status === 403);
 }
 
+/** Guards the admin area: only staff and superusers get through. */
 export function RequireAuth() {
   const location = useLocation();
-  const { error, isLoading } = useCurrentUser();
+  const { data: user, error, isLoading } = useCurrentUser();
 
   if (isLoading) {
     return null;
   }
 
-  if (isAuthError(error)) {
+  const isNonAdmin = user !== undefined && !user.isStaff && !user.isSuperuser;
+  if (isAuthError(error) || isNonAdmin) {
     const next = `${location.pathname}${location.search}`;
     return (
       <Navigate
-        to={`/accounts/login/?next=${encodeURIComponent(next)}`}
+        to={`/admin/login/?next=${encodeURIComponent(next)}`}
         replace
       />
     );

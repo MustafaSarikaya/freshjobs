@@ -38,7 +38,7 @@ export function LoginPage({
 }: LoginPageProps) {
   const [searchParams] = useSearchParams();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const next = searchParams.get("next") ?? "/";
+  const next = searchParams.get("next") ?? "/admin/";
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -63,7 +63,7 @@ export function LoginPage({
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-6 text-foreground">
       <section className="w-full max-w-sm space-y-6 rounded-md border border-border p-4 shadow-sm sm:p-6">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">Job Scout</p>
+          <p className="text-sm font-medium text-muted-foreground">Fresh Jobs</p>
           <h1 className="text-2xl font-semibold tracking-normal">Sign in</h1>
         </div>
 

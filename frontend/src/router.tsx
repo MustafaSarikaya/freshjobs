@@ -1,6 +1,7 @@
-import { createBrowserRouter } from "react-router-dom";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 
 import { App } from "@/App";
+import { AdminShell } from "@/components/AdminShell";
 import { AppShell } from "@/components/AppShell";
 import { RequireAuth } from "@/lib/RequireAuth";
 import { JobsPage } from "@/routes/JobsPage";
@@ -10,26 +11,35 @@ import { SourcesPage } from "@/routes/SourcesPage";
 
 export const router = createBrowserRouter([
   {
-    path: "/accounts/login",
+    element: <AppShell />,
+    children: [
+      {
+        path: "/",
+        element: <JobsPage />,
+      },
+      {
+        path: "/sources",
+        element: <SourcesPage />,
+      },
+    ],
+  },
+  {
+    path: "/admin/login",
     element: <LoginPage />,
   },
   {
     element: <RequireAuth />,
     children: [
       {
-        element: <AppShell />,
+        element: <AdminShell />,
         children: [
           {
-            path: "/",
-            element: <JobsPage />,
+            path: "/admin",
+            element: <Navigate to="/admin/runs" replace />,
           },
           {
-            path: "/runs",
+            path: "/admin/runs",
             element: <RunsPage />,
-          },
-          {
-            path: "/sources",
-            element: <SourcesPage />,
           },
         ],
       },

@@ -19,7 +19,7 @@ function mockAuthMe(status: number, body: unknown = {}) {
   );
 }
 
-function renderRequireAuth(path = "/runs?page=2") {
+function renderRequireAuth(path = "/admin/runs?page=2") {
   const Wrapper = createQueryWrapper();
   return render(
     <Wrapper>
@@ -29,9 +29,9 @@ function renderRequireAuth(path = "/runs?page=2") {
       >
         <Routes>
           <Route element={<RequireAuth />}>
-            <Route path="/runs" element={<p>protected content</p>} />
+            <Route path="/admin/runs" element={<p>protected content</p>} />
           </Route>
-          <Route path="/accounts/login/" element={<p>login page</p>} />
+          <Route path="/admin/login/" element={<p>login page</p>} />
         </Routes>
       </MemoryRouter>
     </Wrapper>,
@@ -39,7 +39,29 @@ function renderRequireAuth(path = "/runs?page=2") {
 }
 
 describe("RequireAuth", () => {
-  it("renders protected content when /auth/me succeeds", async () => {
+  it("renders protected content for staff users", async () => {
+    mockAuthMe(200, {
+      id: 1,
+      username: "u",
+      isStaff: true,
+      isSuperuser: false,
+    });
+    renderRequireAuth();
+    expect(await screen.findByText("protected content")).toBeInTheDocument();
+  });
+
+  it("renders protected content for superusers", async () => {
+    mockAuthMe(200, {
+      id: 1,
+      username: "u",
+      isStaff: false,
+      isSuperuser: true,
+    });
+    renderRequireAuth();
+    expect(await screen.findByText("protected content")).toBeInTheDocument();
+  });
+
+  it("redirects signed-in non-admins to the login page", async () => {
     mockAuthMe(200, {
       id: 1,
       username: "u",
@@ -47,7 +69,7 @@ describe("RequireAuth", () => {
       isSuperuser: false,
     });
     renderRequireAuth();
-    expect(await screen.findByText("protected content")).toBeInTheDocument();
+    expect(await screen.findByText("login page")).toBeInTheDocument();
   });
 
   it("redirects 401 from /auth/me to the login page", async () => {

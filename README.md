@@ -1,49 +1,39 @@
-# job-scout
+# Fresh Jobs
 
-Job scouting application built with Django and PostgreSQL. Monitors company job boards via public APIs (Greenhouse, Lever, Ashby) and tracks new/expired listings.
+Job scouting application: a Spring Boot backend with PostgreSQL and a React SPA. Monitors company job boards via public APIs (Greenhouse, Lever, Ashby, Workday, BambooHR, Phenom, Jibe) and tracks new/expired listings.
 
 ## Local Development
 
 ```bash
-# With Docker
-docker compose up
-
-# Without Docker (requires local PostgreSQL)
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
+docker compose up --build
 ```
 
-The app runs at http://localhost:8000. Health check: http://localhost:8000/api/health
+The app runs at http://localhost:8080. Health check: http://localhost:8080/api/v1/health
 
-### Management Commands
-
-```bash
-# Ingest all active sources
-python manage.py ingest
-
-# Ingest a specific source
-python manage.py ingest --source-id 1
-```
-
-### API Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/health` | No | Health check |
-| GET | `/api/sources/` | No | List all sources |
-| GET | `/api/jobs/` | No | List job listings (legacy quick filters plus advanced filter expression) |
-| GET | `/api/runs/` | No | List ingestion runs |
-| POST | `/api/runs/` | Bearer token | Trigger ingestion run |
+For frontend work with hot reload, run `npm run dev` in `frontend/`.
 
 ### Running Tests
 
 ```bash
-pip install -r requirements-dev.txt
-pytest
+cd backend && mvn test
+cd frontend && npm run test
 ```
+
+### Access
+
+The public site has no sign-in. Saved views and "seen" job markers are kept in the visitor's HTTP session only and are lost when the session expires.
+
+The admin area lives at `/admin` (sign in at `/admin/login`). Only staff and superuser accounts can sign in. It holds the ingestion run history.
+
+### API
+
+The contract is `openapi/openapi.yaml`, served under `/api/v1`. Swagger UI is available at `/swagger-ui.html`.
+
+| Area | Auth |
+|------|------|
+| Health, jobs, sources (read), locations (read), saved views | None |
+| `/api/v1/runs` (read) | Admin session |
+| `POST /api/v1/runs` | Admin session or `INGEST_API_KEY` bearer token |
 
 ## Advanced Filter Expression Contract
 
@@ -100,7 +90,6 @@ Set these at `secret/job-scout/config` in Vault:
 
 | Key | Description |
 |-----|-------------|
-| `SECRET_KEY` | Django secret key (generate with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`) |
 | `DATABASE_URL` | PostgreSQL connection string: `postgres://postgres:<password>@postgres:5432/jobscout` |
 | `POSTGRES_PASSWORD` | PostgreSQL password (must match the password in DATABASE_URL) |
 | `INGEST_API_KEY` | API key for triggering ingestion (also set as GitHub repo secret `INGEST_API_KEY`) |

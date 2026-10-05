@@ -30,16 +30,28 @@ describe("router", () => {
     expect(catchAll).toBeDefined();
   });
 
-  it("routes /runs through the app shell", () => {
-    expect(findRouteByPath(router.routes, "/runs")).toBeDefined();
+  it("does not expose runs outside the admin area", () => {
+    expect(findRouteByPath(router.routes, "/runs")).toBeUndefined();
+  });
+
+  it("routes /admin/runs through the admin area", () => {
+    expect(findRouteByPath(router.routes, "/admin/runs")).toBeDefined();
+  });
+
+  it("routes /admin to the admin index", () => {
+    expect(findRouteByPath(router.routes, "/admin")).toBeDefined();
   });
 
   it("routes /sources through the app shell", () => {
     expect(findRouteByPath(router.routes, "/sources")).toBeDefined();
   });
 
-  it("routes /accounts/login to the login page", () => {
-    expect(findRouteByPath(router.routes, "/accounts/login")).toBeDefined();
+  it("routes /admin/login to the login page", () => {
+    expect(findRouteByPath(router.routes, "/admin/login")).toBeDefined();
+  });
+
+  it("has no general login route", () => {
+    expect(findRouteByPath(router.routes, "/accounts/login")).toBeUndefined();
   });
 
   it("routes / through the app shell", () => {

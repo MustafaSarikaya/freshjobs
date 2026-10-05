@@ -27,11 +27,18 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * The public site has no sign-in. Accounts exist only for the admin area
+ * (ingestion runs), which needs a staff or superuser session. Everything else
+ * is open, with per-visitor state kept in the HTTP session.
+ */
 @Configuration
 public class SecurityConfig {
+
+    private static final AntPathRequestMatcher TRIGGER_RUN =
+        new AntPathRequestMatcher("/api/v1/runs", "POST");
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -55,7 +62,10 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRepository(csrfRepository)
                 .csrfTokenRequestHandler(csrfRequestHandler)
-                .ignoringRequestMatchers(new AntPathRequestMatcher("/api/v1/runs", "POST")))
+                // The scheduled ingest job authenticates with a bearer key and
+                // has no CSRF cookie; admin sessions still need the token.
+                .ignoringRequestMatchers(request ->
+                    TRIGGER_RUN.matches(request) && hasBearerToken(request)))
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .logout(AbstractHttpConfigurer::disable)
@@ -71,14 +81,13 @@ public class SecurityConfig {
                     writeProblem(objectMapper, response, HttpStatus.FORBIDDEN,
                         "Forbidden", "Access denied")))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/v1/runs").permitAll()
-                .requestMatchers("/api/v1/openapi.yaml", "/api/v1/v3/api-docs/**")
-                    .permitAll()
-                .requestMatchers(new NegatedRequestMatcher(
-                    new AntPathRequestMatcher("/api/v1/**"))).permitAll()
-                .anyRequest().authenticated())
+                .requestMatchers("/api/v1/auth/**").authenticated()
+                // RunsController checks for an admin session or the ingest key.
+                .requestMatchers(TRIGGER_RUN).permitAll()
+                .requestMatchers("/api/v1/runs", "/api/v1/runs/**")
+                    .hasAnyRole("STAFF", "SUPERUSER")
+                .anyRequest().permitAll())
             .addFilterAfter(csrfCookieFilter(), BasicAuthenticationFilter.class);
 
         return http.build();
@@ -98,6 +107,11 @@ public class SecurityConfig {
     @Bean
     SecurityContextRepository securityContextRepository() {
         return new HttpSessionSecurityContextRepository();
+    }
+
+    private static boolean hasBearerToken(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        return header != null && header.startsWith("Bearer ");
     }
 
     private static OncePerRequestFilter csrfCookieFilter() {
